@@ -1,0 +1,19 @@
+# Build artifacts
+dist/
+
+# Original binary (third-party, install via: pip install ninecli)
+ninecli.exe
+
+# Dev workspace
+.temp/
+
+# Local credentials & captures
+tokens.json
+config.json
+vehicle-cache.json
+capture.jsonl
+*.har
+
+# OS files
+Thumbs.db
+.DS_Store
