@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>ninecli — 车辆控制台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --p:#4A9EF5;--p-d:#2D7DD2;--p-l:#E8F2FF;
+  --bg:#F5F7FA;--card:#fff;--text:#1A1A2E;--mut:#6B7280;--line:#E5E7EB;
+  --ok:#10B981;--warn:#F59E0B;--bad:#EF4444;--r:10px;
+}
+html,body{height:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Microsoft YaHei",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+button{font-family:inherit}
+.ic{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;vertical-align:-3px}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--card);border-bottom:1px solid var(--line);padding:10px 20px;display:flex;align-items:center;gap:12px}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:16px}
+.logo .dot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--p),var(--p-d));display:flex;align-items:center;justify-content:center;color:#fff}
+.logo .dot svg{width:15px;height:15px;stroke:#fff;fill:none;stroke-width:2}
+.spacer{flex:1}
+.badge{font-size:12px;padding:3px 10px;border-radius:20px;font-weight:600}
+.badge.on{background:#ECFDF5;color:var(--ok)}
+.badge.off{background:#F3F4F6;color:var(--mut)}
+.btn{border:none;border-radius:8px;padding:7px 14px;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.15s;white-space:nowrap}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn-p{background:var(--p);color:#fff}.btn-p:hover{background:var(--p-d)}
+.btn-o{background:var(--card);color:var(--text);border:1px solid var(--line)}.btn-o:hover{border-color:var(--p);color:var(--p)}
+.btn-d{background:#FEF2F2;color:var(--bad);border:1px solid #FECACA}.btn-d:hover{background:var(--bad);color:#fff}
+.btn-sm{padding:5px 10px;font-size:12px}
+
+.wrap{max-width:1080px;margin:0 auto;padding:18px 20px 60px}
+
+/* auth */
+.auth{max-width:400px;margin:8vh auto 0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:26px;box-shadow:0 4px 24px rgba(0,0,0,.05)}
+.auth h2{font-size:17px;margin-bottom:4px}
+.auth .sub{font-size:12px;color:var(--mut);margin-bottom:16px}
+.tabs{display:flex;background:var(--bg);border-radius:8px;padding:3px;margin-bottom:16px}
+.tabs button{flex:1;border:none;background:transparent;padding:7px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--mut)}
+.tabs button.on{background:var(--card);color:var(--text);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.fld{margin-bottom:12px}
+.fld label{display:block;font-size:12px;color:var(--mut);margin-bottom:4px}
+.fld input{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 12px;font-size:14px;outline:none;transition:.15s}
+.fld input:focus{border-color:var(--p)}
+.row2{display:flex;gap:10px}
+.row2 .fld{flex:1}
+.wide{width:100%;justify-content:center;padding:10px}
+.code-row{display:flex;gap:8px}
+.code-row input{flex:1}
+.err{background:#FEF2F2;color:var(--bad);font-size:12px;border-radius:8px;padding:8px 10px;margin-bottom:12px;display:none}
+
+/* main */
+.grid{display:grid;grid-template-columns:300px 1fr;gap:16px;margin-top:14px}
+@media(max-width:760px){.grid{grid-template-columns:1fr}}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px}
+.panel h3{font-size:13px;color:var(--mut);font-weight:600;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between}
+.vlist{display:flex;flex-direction:column;gap:8px;max-height:420px;overflow-y:auto}
+.vcard{border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;transition:.15s;background:var(--card)}
+.vcard:hover{border-color:var(--p)}
+.vcard.on{border-color:var(--p);background:var(--p-l)}
+.vname{font-weight:600;font-size:13px;display:flex;align-items:center;gap:6px}
+.vsn{font-size:11px;color:var(--mut);font-family:ui-monospace,Consolas,monospace}
+.vtag{font-size:10px;padding:1px 6px;border-radius:3px;background:#EEF2FF;color:#6366F1}
+.empty{text-align:center;color:var(--mut);padding:26px 10px;font-size:13px}
+
+.det-head{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.det-head .name{font-weight:700;font-size:16px}
+.kv{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px}
+.kv .cell{background:var(--bg);border-radius:8px;padding:9px 11px}
+.kv .k{font-size:10px;color:var(--mut)}
+.kv .v{font-size:14px;font-weight:600;margin-top:2px;word-break:break-all}
+.det-tabs{display:flex;gap:4px;margin:12px 0}
+.det-tabs button{border:none;background:transparent;padding:6px 12px;border-radius:6px;font-size:13px;cursor:pointer;color:var(--mut)}
+.det-tabs button.on{background:var(--p-l);color:var(--p);font-weight:600}
+.ctrls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;padding-top:14px;border-top:1px dashed var(--line)}
+
+/* travel */
+.tr-row{display:flex;justify-content:space-between;padding:8px 4px;border-bottom:1px solid var(--line);font-size:12px}
+.tr-row:last-child{border-bottom:none}
+.mono{font-family:ui-monospace,Consolas,monospace;font-size:11px;color:var(--mut)}
+
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:sp .7s linear infinite;vertical-align:-2px}
+.spin.dark{border-color:rgba(0,0,0,.15);border-top-color:var(--p)}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* toast + modal */
+#toast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-8px);background:var(--text);color:#fff;padding:8px 18px;border-radius:8px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99;max-width:80vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+#toast.err{background:var(--bad)}
+.ovl{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:50}
+.ovl.show{display:flex}
+.mdl{background:var(--card);border-radius:14px;padding:22px;width:340px;max-width:90vw;text-align:center}
+.mdl .warn-ic{width:44px;height:44px;border-radius:50%;background:#FEF2F2;color:var(--bad);display:flex;align-items:center;justify-content:center;margin:0 auto 12px}
+.mdl .warn-ic svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2}
+.mdl h4{margin-bottom:6px}
+.mdl p{font-size:12px;color:var(--mut);margin-bottom:16px}
+.mdl .acts{display:flex;gap:10px;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="logo"><span class="dot"><svg viewBox="0 0 24 24"><path d="M12 2v6"/><circle cx="12" cy="4" r="1" fill="#fff"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M12 8l4 7H8z"/></svg></span>ninecli</div>
+  <span id="auth-badge" class="badge off">未登录</span>
+  <div class="spacer"></div>
+  <button class="btn btn-o btn-sm" id="btn-refresh" onclick="refreshAll()" style="display:none"><svg class="ic" viewBox="0 0 24 24"><path d="M21 12a9 9 0 11-2.6-6.4"/><path d="M21 3v6h-6"/></svg>刷新</button>
+  <button class="btn btn-o btn-sm" id="btn-logout" onclick="logout()" style="display:none">退出</button>
+</div>
+
+<div class="wrap">
+  <!-- login view -->
+  <div class="auth" id="view-auth" style="display:none">
+    <h2>登录</h2>
+    <div class="sub">凭证保存在本机，与命令行版共用</div>
+    <div class="err" id="auth-err"></div>
+    <div class="tabs">
+      <button id="tab-pass" class="on" onclick="switchTab('pass')">密码登录</button>
+      <button id="tab-sms" onclick="switchTab('sms')">短信登录</button>
+    </div>
+    <div id="form-pass">
+      <div class="fld"><label>手机号</label><input id="in-user" placeholder="+86 手机号" autocomplete="username"></div>
+      <div class="fld"><label>密码</label><input id="in-pass" type="password" autocomplete="current-password"></div>
+      <button class="btn btn-p wide" id="btn-login" onclick="doLogin()">登录</button>
+    </div>
+    <div id="form-sms" style="display:none">
+      <div class="fld"><label>手机号</label><input id="in-phone" placeholder="+86 手机号"></div>
+      <div class="fld"><label>验证码</label>
+        <div class="code-row">
+          <input id="in-code" placeholder="6 位验证码">
+          <button class="btn btn-o" id="btn-code" onclick="doSendCode()">发送</button>
+        </div>
+      </div>
+      <button class="btn btn-p wide" id="btn-login2" onclick="doLoginCode()">登录</button>
+    </div>
+  </div>
+
+  <!-- main view -->
+  <div id="view-main" style="display:none">
+    <div class="grid">
+      <div class="panel">
+        <h3>我的车辆 <span id="v-count" class="mono"></span></h3>
+        <div class="vlist" id="vlist"><div class="empty">点击"刷新"加载车辆</div></div>
+      </div>
+      <div class="panel" id="detail-panel">
+        <div class="empty" id="det-empty">← 选择一辆车查看详情</div>
+        <div id="det-body" style="display:none">
+          <div class="det-head"><span class="name" id="det-name"></span><span class="mono" id="det-sn"></span></div>
+          <div class="det-tabs">
+            <button class="on" id="dt-status" onclick="detTab('status')">状态</button>
+            <button id="dt-battery" onclick="detTab('battery')">电池</button>
+            <button id="dt-travel" onclick="detTab('travel')">骑行记录</button>
+          </div>
+          <div id="det-content"><div class="empty">加载中…</div></div>
+          <div class="ctrls">
+            <button class="btn btn-o" onclick="ctrl('bell')"><svg class="ic" viewBox="0 0 24 24"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>寻车铃</button>
+            <button class="btn btn-d" onclick="ctrlAsk('engine_start')"><svg class="ic" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>电源开启</button>
+            <button class="btn btn-d" onclick="ctrlAsk('engine_stop')"><svg class="ic" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>电源关闭</button>
+            <button class="btn btn-d" onclick="ctrlAsk('buck')"><svg class="ic" viewBox="0 0 24 24"><path d="M3 9h18v10a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><path d="M3 9l2.5-5h13L21 9"/></svg>打开坐桶</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div class="ovl" id="confirm-ovl">
+  <div class="mdl">
+    <div class="warn-ic"><svg viewBox="0 0 24 24"><path d="M10.3 3.9L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+    <h4>确认执行？</h4>
+    <p id="confirm-text"></p>
+    <div class="acts">
+      <button class="btn btn-o" onclick="confirmCancel()">取消</button>
+      <button class="btn btn-d" id="confirm-go">确认</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var state = { authed:false, vehicles:[], sel:null, tab:'status', tabData:null };
+var pendingOp = null;
+
+function $(id){ return document.getElementById(id) }
+function esc(s){ var d=document.createElement('div'); d.textContent=(s==null?'':String(s)); return d.innerHTML }
+
+function toast(msg, isErr){
+  var t=$('toast'); t.textContent=msg; t.className=isErr?'show err':'show';
+  clearTimeout(t._h); t._h=setTimeout(function(){t.className=''},2600);
+}
+
+function switchTab(m){
+  $('tab-pass').className = m==='pass'?'on':'';
+  $('tab-sms').className = m==='sms'?'on':'';
+  $('form-pass').style.display = m==='pass'?'':'none';
+  $('form-sms').style.display = m==='sms'?'':'none';
+  $('auth-err').style.display='none';
+}
+function authErr(msg){ var e=$('auth-err'); e.textContent=msg; e.style.display='block' }
+
+function busy(btn, on, label){
+  if(on){ btn._txt=btn.innerHTML; btn.disabled=true; btn.innerHTML='<span class="spin"></span> '+(label||'请稍候') }
+  else { btn.disabled=false; btn.innerHTML=btn._txt||label }
+}
+
+async function api(path, opts){
+  var r = await fetch(path, opts);
+  var m = null;
+  try{ m = await r.json() }catch(e){}
+  if(!r.ok || (m && m.error)) throw new Error((m&&m.error)||('HTTP '+r.status));
+  return m;
+}
+
+async function loadState(){
+  var s = await api('/api/state');
+  state.authed = s.logged_in;
+  if(s.vehicles) state.vehicles = s.vehicles;
+  renderAuth();
+}
+
+function renderAuth(){
+  var on = state.authed;
+  $('view-auth').style.display = on?'none':'';
+  $('view-main').style.display = on?'':'none';
+  $('btn-refresh').style.display = on?'':'none';
+  $('btn-logout').style.display = on?'':'none';
+  var b=$('auth-badge');
+  if(on){ b.className='badge on'; b.textContent='已登录'+(state.vehicles.length?(' · '+state.vehicles.length+' 辆车'):'') }
+  else { b.className='badge off'; b.textContent='未登录' }
+}
+
+async function doLogin(){
+  var u=$('in-user').value.trim(), p=$('in-pass').value.trim();
+  if(!u||!p){ authErr('请填写手机号和密码'); return }
+  var btn=$('btn-login'); busy(btn,true,'登录中');
+  try{ await api('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user:u,pass:p})}); toast('登录成功'); state.authed=true; renderAuth(); await refreshAll(); }
+  catch(e){ authErr(e.message) }
+  busy(btn,false);
+}
+
+async function doSendCode(){
+  var ph=$('in-phone').value.trim();
+  if(!ph){ authErr('请填写手机号'); return }
+  var btn=$('btn-code'); busy(btn,true,'发送中');
+  try{ await api('/api/send-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:ph})}); toast('验证码已发送'); var n=60; var h=setInterval(function(){ btn.disabled=true; btn.textContent=n+'s'; if(--n<0){clearInterval(h);btn.disabled=false;btn.textContent='发送'} },1000); }
+  catch(e){ authErr(e.message); busy(btn,false) }
+}
+
+async function doLoginCode(){
+  var ph=$('in-phone').value.trim(), c=$('in-code').value.trim();
+  if(!ph||!c){ authErr('请填写手机号和验证码'); return }
+  var btn=$('btn-login2'); busy(btn,true,'登录中');
+  try{ await api('/api/login-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:ph,code:c})}); toast('登录成功'); state.authed=true; renderAuth(); await refreshAll(); }
+  catch(e){ authErr(e.message) }
+  busy(btn,false);
+}
+
+async function logout(){
+  try{ await api('/api/logout',{method:'POST'}) }catch(e){}
+  state={authed:false,vehicles:[],sel:null,tab:'status',tabData:null};
+  renderAuth(); renderVehicles(); toast('已退出');
+}
+
+async function refreshAll(){
+  var btn=$('btn-refresh'); busy(btn,true,'加载');
+  try{
+    var m = await api('/api/vehicles');
+    state.vehicles = m.vehicles||[];
+    renderAuth(); renderVehicles();
+    if(state.vehicles.length && !state.sel){ selectVehicle(state.vehicles[0].sn) }
+  }catch(e){ toast(e.message,true) }
+  busy(btn,false);
+}
+
+function renderVehicles(){
+  var el=$('vlist'); $('v-count').textContent = state.vehicles.length?('('+state.vehicles.length+')'):'';
+  if(!state.vehicles.length){ el.innerHTML='<div class="empty">暂无车辆，点"刷新"重试</div>'; return }
+  var h='';
+  state.vehicles.forEach(function(v){
+    h+='<div class="vcard'+(state.sel===v.sn?' on':'')+'" onclick="selectVehicle(\''+esc(v.sn)+'\')">'
+     + '<div class="vname"><svg class="ic" viewBox="0 0 24 24"><circle cx="6" cy="18" r="3"/><circle cx="18" cy="18" r="3"/><path d="M12 8l4 7H8z"/><path d="M12 5V3"/></svg>'+esc(v.name||'未命名')
+     + (v.shared?' <span class="vtag">共享</span>':'')+'</div>'
+     + '<div class="vsn">'+esc(v.sn)+(v.product?(' · '+esc(v.product)):'')+'</div></div>';
+  });
+  el.innerHTML=h;
+}
+
+function selectVehicle(sn){
+  state.sel = sn;
+  var v = state.vehicles.filter(function(x){return x.sn===sn})[0]||{};
+  $('det-name').textContent = v.name||'未命名';
+  $('det-sn').textContent = sn;
+  $('det-empty').style.display='none';
+  $('det-body').style.display='';
+  renderVehicles();
+  detTab(state.tab||'status');
+}
+
+function detTab(t){
+  state.tab=t;
+  ['status','battery','travel'].forEach(function(x){ $('dt-'+x).className = x===t?'on':'' });
+  var sn=state.sel; if(!sn) return;
+  var path = t==='status'?('/api/status?sn='+encodeURIComponent(sn))
+           : t==='battery'?('/api/battery?sn='+encodeURIComponent(sn))
+           : ('/api/travel?sn='+encodeURIComponent(sn));
+  $('det-content').innerHTML='<div class="empty"><span class="spin dark"></span> 加载中…</div>';
+  api(path).then(function(m){ if(state.sel===sn){ state.tabData=m; renderDet(t,m) } })
+           .catch(function(e){ if(state.sel===sn) $('det-content').innerHTML='<div class="empty">'+esc(e.message)+'</div>' });
+}
+
+function cell(k,v){ return '<div class="cell"><div class="k">'+esc(k)+'</div><div class="v">'+esc(v==null||v===''?'--':v)+'</div></div>' }
+
+function renderDet(t,m){
+  var el=$('det-content');
+  if(t==='status'){
+    // Keys from original binary output (loc already flattened by backend)
+    var labels={dump_energy:'电量%',charging:'充电状态',estimate_mileage:'预计续航(km)',ai_estimate_mileage:'AI续航(km)',lock:'车锁',acc:'ACC',pwr:'电源',lat:'纬度',lon:'经度',ble_name:'蓝牙名称',battery_exist:'电池在线',barrel_lock_status:'坐桶锁',is_smart_service_expired:'智服过期'};
+    var order=['dump_energy','charging','estimate_mileage','ai_estimate_mileage','lock','acc','pwr','lat','lon','ble_name','battery_exist','barrel_lock_status','is_smart_service_expired'];
+    var h='<div class="kv">';
+    var shown=false;
+    order.forEach(function(k){ if(m[k]!==undefined){ var v=m[k]; if(k==='charging') v=v?'充电中':'未充电'; if(k==='lock') v=v?'已锁':'未锁'; if(k==='acc'||k==='pwr') v=v?'开':'关'; h+=cell(labels[k]||k,v); shown=true } });
+    if(!shown){ Object.keys(m).forEach(function(k){ if(typeof m[k]!=='object'){ h+=cell(k,m[k]); shown=true } }) }
+    h+='</div>';
+    if(!shown) h='<div class="empty">暂无状态数据</div>';
+    el.innerHTML=h;
+  } else if(t==='battery'){
+    var h2='<div class="kv">';
+    h2+=cell('主电池电量', m.electricity!=null?m.electricity+'%':'--');
+    h2+=cell('充电状态', m.charging?'充电中':'未充电');
+    h2+=cell('电池数量', m.battery_count||'--');
+    h2+=cell('剩余充电时间', m.remain_charge_time||'--');
+    h2+='</div>';
+    // Show battery list details
+    if(m.battery_list && m.battery_list.length){
+      h2+='<div class="det-tabs" style="margin-top:10px"><span style="color:var(--mut);font-size:12px">电池详情</span></div>';
+      m.battery_list.forEach(function(b,i){
+        if(b.electricity && b.electricity!=='0'){
+          h2+='<div class="kv" style="margin-top:6px">';
+          h2+=cell('电池'+(i+1)+' 电量', b.electricity+'%');
+          h2+=cell('电池'+(i+1)+' 电压', b.bms_volt+'V');
+          h2+=cell('电池'+(i+1)+' 温度', b.bat_temp+'°C');
+          h2+='</div>';
+        }
+      });
+    }
+    el.innerHTML=h2;
+  } else {
+    var data = m.data||m;
+    var list = data.travels||data.list||data.records||[];
+    if(!list.length){ el.innerHTML='<div class="empty">本月暂无骑行记录</div>'; return }
+    var total = data.total_mileages?('<span style="color:var(--mut)">总里程: '+esc(data.total_mileages)+' km · '+esc(data.times)+' 次</span>  '):'';
+    var h3='<div class="tr-row" style="color:var(--mut)"><span>开始时间</span><span>距离</span><span>时长</span></div>';
+    list.forEach(function(tr){
+      var stime = tr.end_time_format||tr.start_time_format||'';
+      if(!stime && tr.start_time){ var d=new Date(tr.start_time*1000); stime=d.toLocaleDateString('zh-CN')+' '+d.toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'}) }
+      var dist = tr.mileages!=null?esc(tr.mileages+' km'):(tr.distance!=null?esc((tr.distance/1000).toFixed(1)+' km'):'--');
+      var dur = tr.duration!=null?esc(Math.round(tr.duration/60)+' 分'):(tr.ridingTime!=null?esc(Math.round(tr.ridingTime/60)+' 分'):'--');
+      h3+='<div class="tr-row"><span>'+esc(stime)+'</span><span>'+dist+'</span><span>'+dur+'</span></div>';
+    });
+    el.innerHTML=total+h3;
+  }
+}
+
+function ctrl(op){ doControl(op) }
+
+function ctrlAsk(op){
+  pendingOp=op;
+  var names={engine_start:'远程电源开启（解锁车辆）',engine_stop:'远程电源关闭（锁定车辆）',buck:'远程打开坐桶'};
+  $('confirm-text').textContent = names[op]||op;
+  $('confirm-ovl').classList.add('show');
+}
+function confirmCancel(){ $('confirm-ovl').classList.remove('show'); pendingOp=null }
+
+async function doControl(op){
+  var sn=state.sel; if(!sn||!op) return;
+  if(op!=='bell'){ $('confirm-ovl').classList.remove('show'); pendingOp=null }
+  toast('正在执行…');
+  try{
+    await api('/api/control',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({op:op,sn:sn})});
+    toast('执行成功'+(op==='bell'?'（听铃声）':''));
+  }catch(e){ toast(e.message,true) }
+}
+
+$('confirm-go').addEventListener('click', function(){ if(pendingOp) doControl(pendingOp) });
+$('confirm-ovl').addEventListener('click', function(e){ if(e.target===this) confirmCancel() });
+document.addEventListener('keydown', function(e){ if(e.key==='Escape') confirmCancel() });
+
+loadState().then(function(){
+  if(state.authed){ renderVehicles(); if(state.vehicles.length && !state.sel){ selectVehicle(state.vehicles[0].sn) } refreshAll() }
+}).catch(function(){ renderAuth() });
+</script>
+</body>
+</html>
